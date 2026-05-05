@@ -1,0 +1,10 @@
+{
+  "zoom": 7,
+  "points": [
+    { "label": "Sapporo", "lon": 141.3545, "lat": 43.0618 },
+    { "label": "Tokyo", "lon": 139.6917, "lat": 35.6895 },
+    { "label": "Osaka", "lon": 135.5023, "lat": 34.6937 },
+    { "label": "Fukuoka", "lon": 130.4017, "lat": 33.5902 },
+    { "label": "Naha", "lon": 127.6792, "lat": 26.2124 }
+  ]
+}
