@@ -1,80 +1,97 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import type { AsyncDuckDB } from '@duckdb/duckdb-wasm'
+	import { Effect, Option } from 'effect'
+	import { getRandomLandscape, initDb, loadInitialData } from '$lib/db'
+	import type { Landscape } from '$lib/types'
+	import { chiriinMapUrlBuilder } from '$lib/utils'
 
-	type Landscape = {
-		name: string;
-		kind: string;
-		location: string;
-		description: string | null;
-		lon: number | null;
-		lat: number | null;
-	};
+	let dbInstance = $state<Option.Option<AsyncDuckDB>>(Option.none())
+	let current = $state<Landscape | null>(null)
+	let loading = $state(false)
+	let errorMessage = $state<string | null>(null)
+	let lastRollAt = $state<string | null>(null)
 
-	let current = $state<Landscape | null>(null);
-	let loading = $state(false);
-	let error = $state<string | null>(null);
-	let lastRollAt = $state<string | null>(null);
-
-	let dbModule: typeof import('$lib/db') | null = null;
-
+	const COORD_DECIMALS = 5
 	const formatCoord = (value: number | null) =>
-		value === null ? '—' : value.toFixed(5);
+		value === null ? '—' : value.toFixed(COORD_DECIMALS)
 
 	const formatTime = (date: Date) =>
-		date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+		date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
 
-	async function ensureDb() {
-		if (!dbModule) {
-			dbModule = await import('$lib/db');
-			await dbModule.initDb();
-		}
-		return dbModule;
+	function roll() {
+		loading = true
+		errorMessage = null
+		Option.match(dbInstance, {
+			onSome: async (db) => {
+				const conn = await db.connect()
+				try {
+					const result = await Effect.runPromise(getRandomLandscape(conn))
+					if (!result) {
+						throw new Error('データが見つかりませんでした')
+					}
+					current = result
+					lastRollAt = formatTime(new Date())
+				} catch (err) {
+					errorMessage = err instanceof Error ? err.message : '読み込みに失敗しました'
+				} finally {
+					loading = false
+					await conn.close()
+				}
+			},
+			onNone: async () => {
+				try {
+					const db = await Effect.runPromise(initDb())
+					const conn = await db.connect()
+					await Effect.runPromise(loadInitialData(conn))
+					const result = await Effect.runPromise(getRandomLandscape(conn))
+					if (!result) {
+						throw new Error('データが見つかりませんでした')
+					}
+					current = result
+					lastRollAt = formatTime(new Date())
+					dbInstance = Option.some(db)
+					await conn.close()
+				} catch (err) {
+					errorMessage = err instanceof Error ? err.message : '読み込みに失敗しました'
+				} finally {
+					loading = false
+				}
+			},
+		})
 	}
-
-	async function roll() {
-		loading = true;
-		error = null;
-
-		try {
-			const { getRandomLandscape } = await ensureDb();
-			const result = await getRandomLandscape();
-			if (!result) {
-				throw new Error('データが見つかりませんでした');
-			}
-			current = result;
-			lastRollAt = formatTime(new Date());
-		} catch (err) {
-			error = err instanceof Error ? err.message : '読み込みに失敗しました';
-		} finally {
-			loading = false;
-		}
-	}
-
-	onMount(() => {
-		roll();
-	});
 </script>
 
 <main class="page">
 	<section class="hero">
-		<p class="eyebrow">GSI GeoJSON × DuckDB Spatial</p>
 		<h1>日本の地形ガチャ</h1>
-		<p class="lead">基準点データからランダムに1件を引き当てます。</p>
+
+		<button command="show-modal" commandfor="my-dialog" class="roll" type="button">概要</button>
+
+		<dialog id="my-dialog">
+			<p>日本の典型的な地形からランダムに一つ表示します。</p>
+			<p>
+				データは<a href="https://www.gsi.go.jp/kikaku/tenkei_top.html"
+					>国土地理院「日本の典型的地形に関する調査」</a
+				>より私<a href="https://github.com/kanium3">kanium3</a>が加工したデータを利用しています。
+			</p>
+			<p>このアプリケーションは<a href="https://github.com/kanium3/landscape_gacha">GitHub</a>でソースコードを公開しています。</p>
+			<button commandfor="my-dialog" command="close" class="roll" type="button">閉じる</button>
+		</dialog>
 	</section>
 
 	<section class="panel">
 		<div class="panel-head">
-			<button class="roll" onclick={roll} disabled={loading}>
-				{loading ? '読み込み中…' : 'ガチャを回す'}
+			<button type="button" class="roll" onclick={roll} disabled={loading}>
+				{loading ? "読み込み中…" : "ガチャを回す"}
 			</button>
 			{#if lastRollAt}
 				<p class="timestamp">更新 {lastRollAt}</p>
 			{/if}
 		</div>
 
-		{#if error}
+		{#if errorMessage}
 			<div class="card error">
-				<p>{error}</p>
+				<p>{errorMessage}</p>
 			</div>
 		{:else if loading}
 			<div class="card skeleton">
@@ -99,7 +116,7 @@
 				</div>
 				<div class="row">
 					<span class="label">説明</span>
-					<span class="value">{current.description ?? '—'}</span>
+					<span class="value">{current.description ?? "—"}</span>
 				</div>
 				<div class="row">
 					<span class="label">座標</span>
@@ -107,15 +124,22 @@
 						緯度 {formatCoord(current.lat)} / 経度 {formatCoord(current.lon)}
 					</span>
 				</div>
+				{#if current.lon !== null && current.lat !== null}
+					<div class="row">
+						<a href={chiriinMapUrlBuilder(current.lat, current.lon)}>地理院地図で開く</a>
+					</div>
+				{/if}
 			</div>
 		{/if}
 	</section>
+
+	&copy; 2026 kanium3
 </main>
 
 <style>
 	:global(body) {
 		margin: 0;
-		font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', serif;
+		font-family: "Hiragino Mincho ProN", "Yu Mincho", "MS Mincho", serif;
 		background: radial-gradient(circle at top, #fff4e0 0%, #f3e9db 45%, #eadcc8 100%);
 		color: #2b2016;
 	}
@@ -126,31 +150,21 @@
 		grid-template-rows: auto 1fr;
 		gap: 2rem;
 		padding: 3.5rem clamp(1.5rem, 4vw, 5rem) 4rem;
-		background-image: radial-gradient(circle at 10% 20%, rgba(255, 255, 255, 0.6), transparent 40%),
+		background-image:
+			radial-gradient(circle at 10% 20%, rgba(255, 255, 255, 0.6), transparent 40%),
 			radial-gradient(circle at 80% 0%, rgba(255, 227, 196, 0.6), transparent 45%);
 	}
 
 	.hero {
 		max-width: 720px;
-	}
-
-	.eyebrow {
-		letter-spacing: 0.25em;
-		text-transform: uppercase;
-		font-size: 0.75rem;
-		color: #7a5c3a;
-		margin-bottom: 0.5rem;
+		display: flex;
+		flex-direction: row;
+		gap: 2rem;
 	}
 
 	h1 {
 		font-size: clamp(2.3rem, 4vw, 3.4rem);
 		margin: 0 0 0.75rem;
-	}
-
-	.lead {
-		font-size: 1.05rem;
-		line-height: 1.7;
-		color: #4a3523;
 	}
 
 	.panel {
@@ -179,7 +193,9 @@
 		background: linear-gradient(120deg, #1f140b, #4c2b10);
 		color: #f9efe3;
 		cursor: pointer;
-		transition: transform 0.2s ease, box-shadow 0.2s ease;
+		transition:
+			transform 0.2s ease,
+			box-shadow 0.2s ease;
 	}
 
 	.roll:disabled {
