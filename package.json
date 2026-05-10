@@ -20,6 +20,7 @@
 		"@biomejs/biome": "^2.4.14",
 		"@duckdb/node-api": "1.5.2-r.1",
 		"@sveltejs/adapter-auto": "^7.0.1",
+		"@sveltejs/adapter-static": "^3.0.10",
 		"@sveltejs/kit": "^2.57.0",
 		"@sveltejs/vite-plugin-svelte": "^7.0.0",
 		"@types/node": "^22",
