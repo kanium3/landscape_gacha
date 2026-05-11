@@ -23,6 +23,8 @@ const loadSpatial = (conn: duckdb.AsyncDuckDBConnection): Effect.Effect<void> =>
 		yield* Effect.promise(() => conn.query('LOAD spatial'))
 	})
 
+const dbCheckPoint = (conn: duckdb.AsyncDuckDBConnection): Effect.Effect<void> =>
+	Effect.promise(() => conn.query('CHECKPOINT'))
 
 export class DbInitError extends Data.TaggedError('DBInitError')<{
 	message: string
@@ -32,6 +34,10 @@ export function initDb(): Effect.Effect<duckdb.AsyncDuckDB, DbInitError> {
 	const selectBundle = Effect.promise(() => duckdb.selectBundle(MANUAL_BUNDLES))
 	const dbInit = (db: duckdb.AsyncDuckDB, bundle: duckdb.DuckDBBundle) =>
 		Effect.promise(() => db.instantiate(bundle.mainModule, bundle.pthreadWorker))
+	const dbOpenFromFs = (db: duckdb.AsyncDuckDB) => Effect.promise(() => db.open({
+		path: "opfs://landscape-gacha.db",
+		accessMode: duckdb.DuckDBAccessMode.READ_WRITE
+	}))
 	const dbConnect = (db: duckdb.AsyncDuckDB) => Effect.promise(() => db.connect())
 	const dbClose = (conn: duckdb.AsyncDuckDBConnection) => Effect.promise(() => conn.close())
 	const dbFileRegister = (db: duckdb.AsyncDuckDB) =>
@@ -62,6 +68,7 @@ export function initDb(): Effect.Effect<duckdb.AsyncDuckDB, DbInitError> {
 		const db = new duckdb.AsyncDuckDB(logger, worker)
 		yield* dbInit(db, bundle)
 		yield* dbFileRegister(db)
+		yield* dbOpenFromFs(db)
 
 		const conn = yield* dbConnect(db)
 		yield* loadSpatial(conn)
@@ -81,6 +88,8 @@ export const loadInitialData = (conn: duckdb.AsyncDuckDBConnection): Effect.Effe
 					SELECT * FROM read_parquet(['tenkei_daichikei.parquet', 'tenkei_kasho.parquet'])
 			`)
 		)
+
+		yield* dbCheckPoint(conn)
 	})
 
 export const getRandomLandscape = (conn: duckdb.AsyncDuckDBConnection) =>
