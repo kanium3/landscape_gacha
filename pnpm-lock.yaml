@@ -4,6 +4,10 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  cookie@<0.7.0: '>=0.7.0'
+  devalue@>=5.6.3 <=5.8.0: '>=5.8.1'
+
 importers:
 
   .:
@@ -965,10 +969,6 @@ packages:
     resolution: {integrity: sha512-85UdvzTNx/+s5CkSgBm/0hzP80RFHAa7PsfeADE5ezZF3uHz3/Tqj9gIKGT9PTtpycc3Ua64T0oVulGfKxzfqg==}
     engines: {node: '>=12.20.0'}
 
-  cookie@0.6.0:
-    resolution: {integrity: sha512-U71cyTamuh1CRNCfpGY6to28lxvNwPG4Guz/EVjgf3Jmzv0vlDp1atT9eS5dDjMYHucpHbWns6Lwf3BKz6svdw==}
-    engines: {node: '>= 0.6'}
-
   cookie@1.1.1:
     resolution: {integrity: sha512-ei8Aos7ja0weRpFzJnEA9UHJ/7XQmqglbRwnf2ATjcB9Wq874VKH9kfjjirM6UhU2/E5fFYadylyhFldcqSidQ==}
     engines: {node: '>=18'}
@@ -980,9 +980,6 @@ packages:
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
-
-  devalue@5.8.0:
-    resolution: {integrity: sha512-2zA9pFEsnp7vWBZbXF5JAgAq0fsUIt/1XPbRiAmRV3lp/2C3upzH+sADiyy66aFCihoLEsrQHxNM5w1gIDfsBg==}
 
   devalue@5.8.1:
     resolution: {integrity: sha512-4CXDYRBGqN+57wVJkuXBYmpAVUSg3L6JAQa/DFqm238G73E1wuyc/JhGQJzN7vUf/CMphYau2zXbfWzDR5aTEw==}
@@ -1932,8 +1929,8 @@ snapshots:
       '@sveltejs/vite-plugin-svelte': 7.0.0(svelte@5.55.7(@typescript-eslint/types@8.59.1))(vite@8.0.10(@types/node@22.19.17)(esbuild@0.27.7)(tsx@4.21.0))
       '@types/cookie': 0.6.0
       acorn: 8.16.0
-      cookie: 0.6.0
-      devalue: 5.8.0
+      cookie: 1.1.1
+      devalue: 5.8.1
       esm-env: 1.2.2
       kleur: 4.1.5
       magic-string: 0.30.21
@@ -2057,15 +2054,11 @@ snapshots:
       table-layout: 4.1.1
       typical: 7.3.0
 
-  cookie@0.6.0: {}
-
   cookie@1.1.1: {}
 
   deepmerge@4.3.1: {}
 
   detect-libc@2.1.2: {}
-
-  devalue@5.8.0: {}
 
   devalue@5.8.1: {}
 
